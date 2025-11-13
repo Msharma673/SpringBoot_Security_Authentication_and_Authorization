@@ -1,0 +1,13 @@
+package com.SpringBootSecurity.SpringBootSecurityAuthenticationAndAuthorization;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class SpringBootSecurityAuthenticationAndAuthorizationApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SpringBootSecurityAuthenticationAndAuthorizationApplication.class, args);
+	}
+
+}
