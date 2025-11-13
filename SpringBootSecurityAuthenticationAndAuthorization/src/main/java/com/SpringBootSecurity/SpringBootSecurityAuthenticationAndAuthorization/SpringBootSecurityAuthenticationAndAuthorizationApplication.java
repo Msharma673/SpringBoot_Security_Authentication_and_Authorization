@@ -2,8 +2,12 @@ package com.SpringBootSecurity.SpringBootSecurityAuthenticationAndAuthorization;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.domain.EntityScan;
+import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication
+@EntityScan(basePackages = {"model", "com.SpringBootSecurity.SpringBootSecurityAuthenticationAndAuthorization.model"})
+@EnableJpaRepositories(basePackages = {"repository", "com.SpringBootSecurity.SpringBootSecurityAuthenticationAndAuthorization.repository"})
 public class SpringBootSecurityAuthenticationAndAuthorizationApplication {
 
 	public static void main(String[] args) {
