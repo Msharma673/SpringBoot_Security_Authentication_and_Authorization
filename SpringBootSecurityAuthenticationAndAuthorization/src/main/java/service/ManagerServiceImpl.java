@@ -1,15 +1,14 @@
 package service;
 
 //Manager service implementation
-
-
-import com.example.corporate.dto.manager.*;
-import com.example.corporate.mapper.ManagerMapper;
-import com.example.corporate.model.Manager;
-import com.example.corporate.repository.ManagerRepository;
-import com.example.corporate.exception.ResourceNotFoundException;
+import dto.manager.*;
+import mapper.ManagerMapper;
+import model.Manager;
+import repository.ManagerRepository;
+import exception.ResourceNotFoundException;
 import org.slf4j.*;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -19,6 +18,7 @@ public class ManagerServiceImpl implements ManagerService {
  private final ManagerRepository managerRepository;
  private final Logger logger = LoggerFactory.getLogger(ManagerServiceImpl.class);
 
+ @Autowired
  public ManagerServiceImpl(ManagerRepository managerRepository) {
      this.managerRepository = managerRepository;
  }

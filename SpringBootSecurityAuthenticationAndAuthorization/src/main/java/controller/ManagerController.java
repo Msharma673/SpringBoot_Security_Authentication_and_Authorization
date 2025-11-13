@@ -1,12 +1,13 @@
 package controller;
 
 //Manager REST controller with role-based access using @PreAuthorize
-
-
-
+import dto.manager.*;
+import service.ManagerService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
 
@@ -14,6 +15,8 @@ import java.util.List;
 @RequestMapping("/api/managers")
 public class ManagerController {
  private final ManagerService managerService;
+ 
+ @Autowired
  public ManagerController(ManagerService managerService) { this.managerService = managerService; }
 
  @PreAuthorize("hasRole('ADMIN')")

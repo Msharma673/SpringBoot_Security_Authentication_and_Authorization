@@ -1,92 +1,116 @@
 package service;
 
+import dto.auth.JwtResponse;
+import dto.auth.LoginRequest;
+import dto.auth.SignupRequest;
+import model.Role;
+import model.User;
+import repository.RoleRepository;
+import repository.UserRepository;
+import security.JwtUtils;
 
-//Implementation of AuthService: user creation, login generation (JWT)
-//Implementation of AuthService: user creation, login generation (JWT)
-package com.example.corporate.service;
-
-import com.example.corporate.dto.auth.*;
-import com.example.corporate.model.*;
-import com.example.corporate.repository.*;
-import com.example.corporate.security.JwtUtils;
-import org.springframework.security.authentication.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.slf4j.*;
 
-import java.util.Set;
+import java.util.HashSet;
 
 @Service
 public class AuthServiceImpl implements AuthService {
- private final AuthenticationManager authenticationManager;
- private final UserRepository userRepository;
- private final RoleRepository roleRepository;
- private final PasswordEncoder passwordEncoder;
- private final JwtUtils jwtUtils;
- private final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
- public AuthServiceImpl(AuthenticationManager authenticationManager,
-                        UserRepository userRepository,
-                        RoleRepository roleRepository,
-                        PasswordEncoder passwordEncoder,
-                        JwtUtils jwtUtils) {
-     this.authenticationManager = authenticationManager;
-     this.userRepository = userRepository;
-     this.roleRepository = roleRepository;
-     this.passwordEncoder = passwordEncoder;
-     this.jwtUtils = jwtUtils;
- }
+    private final AuthenticationManager authenticationManager;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
 
- @Override
- public JwtResponse authenticate(LoginRequest request) {
-     // authenticate using AuthenticationManager (usernameOrEmail resolution handled in CustomUserDetailsService)
-     Authentication authentication = authenticationManager.authenticate(
-             new UsernamePasswordAuthenticationToken(request.getUsernameOrEmail(), request.getPassword())
-     );
-     // If no exception, successful
-     String token = jwtUtils.generateToken(authentication.getName());
-     logger.info("User {} authenticated successfully", authentication.getName());
-     return new JwtResponse(token, "Bearer", jwtUtils == null ? 3600L : jwtUtilsExpiration());
- }
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
- // helper to safely get expiration
- private Long jwtUtilsExpiration() {
-     try {
-         java.lang.reflect.Field f = JwtUtils.class.getDeclaredField("expirationSeconds");
-         f.setAccessible(true);
-         return (Long) f.get(jwtUtils);
-     } catch (Exception e) {
-         return 3600L;
-     }
- }
+    public AuthServiceImpl(AuthenticationManager authenticationManager,
+                           UserRepository userRepository,
+                           RoleRepository roleRepository,
+                           PasswordEncoder passwordEncoder,
+                           JwtUtils jwtUtils) {
+        this.authenticationManager = authenticationManager;
+        this.userRepository = userRepository;
+        this.roleRepository = roleRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+    }
 
- @Override
- public void signup(SignupRequest request, String requesterUsername) {
-     if (userRepository.existsByUsername(request.getUsername()))
-         throw new IllegalArgumentException("Username already taken");
-     if (userRepository.existsByEmail(request.getEmail()))
-         throw new IllegalArgumentException("Email already in use");
+    @Override
+    public JwtResponse authenticate(LoginRequest request) {
 
-     User user = new User();
-     user.setUsername(request.getUsername());
-     user.setEmail(request.getEmail());
-     user.setPassword(passwordEncoder.encode(request.getPassword()));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsernameOrEmail(),
+                        request.getPassword()
+                )
+        );
 
-     // Determine role: by default USER, but if request.role == ADMIN require requester is ADMIN
-     String desired = (request.getRole() == null) ? "USER" : request.getRole().toUpperCase();
-     if ("ADMIN".equals(desired)) {
-         // only allow if requesterUsername has ADMIN role
-         if (requesterUsername == null) {
-             throw new SecurityException("Cannot create ADMIN without admin privileges");
-         }
-         User requester = userRepository.findByUsername(requesterUsername).orElseThrow();
-         boolean isAdmin = requester.getRoles().stream().anyMatch(r -> "ADMIN".equals(r.getName()));
-         if (!isAdmin) throw new SecurityException("Only ADMIN can create ADMIN user");
-     }
-     Role role = roleRepository.findByName(desired).orElseThrow(() -> new IllegalStateException("Role not configured: " + desired));
-     user.getRoles().add(role);
-     userRepository.save(user);
-     logger.info("New user created: {} with role {}", user.getUsername(), desired);
- }
+        String username = authentication.getName();
+        String token = jwtUtils.generateToken(username);
+
+        logger.info("User {} authenticated successfully", username);
+
+        return new JwtResponse(token, "Bearer", jwtUtils.getExpirationSeconds());
+    }
+
+    @Override
+    public void signup(SignupRequest request, String requesterUsername) {
+
+        if (userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username already taken");
+        }
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already in use");
+        }
+
+        User user = new User();
+
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        // prevent NullPointerException
+        user.setRoles(new HashSet<>());
+
+        // Determine desired role
+        String desiredRole = (request.getRole() == null)
+                ? "USER"
+                : request.getRole().toUpperCase();
+
+        // Only ADMIN can create ADMIN
+        if ("ADMIN".equals(desiredRole)) {
+            if (requesterUsername == null) {
+                throw new SecurityException("Only ADMIN can create ADMIN user");
+            }
+
+            User requester = userRepository.findByUsername(requesterUsername)
+                    .orElseThrow(() -> new IllegalArgumentException("Requester not found"));
+
+            boolean isAdmin = requester.getRoles()
+                    .stream()
+                    .anyMatch(role -> "ADMIN".equals(role.getName()));
+
+            if (!isAdmin) {
+                throw new SecurityException("Only ADMIN can create ADMIN user");
+            }
+        }
+
+        // Load role from DB
+        Role role = roleRepository.findByName(desiredRole)
+                .orElseThrow(() -> new IllegalStateException("Role not found: " + desiredRole));
+
+        user.getRoles().add(role);
+
+        userRepository.save(user);
+
+        logger.info("New user created: {} with role {}", user.getUsername(), desiredRole);
+    }
 }

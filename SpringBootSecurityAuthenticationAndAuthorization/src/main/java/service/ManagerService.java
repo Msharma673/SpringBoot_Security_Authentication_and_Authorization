@@ -1,9 +1,7 @@
 package service;
 
 //Manager service interface
-package com.example.corporate.service;
-
-import com.example.corporate.dto.manager.*;
+import dto.manager.*;
 import java.util.List;
 
 public interface ManagerService {

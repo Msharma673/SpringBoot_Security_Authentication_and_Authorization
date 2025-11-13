@@ -1,7 +1,9 @@
 package security;
 
-
-import java.security.Key;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import javax.crypto.SecretKey;
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -14,7 +16,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class JwtUtils {
- private final Key key;
+ private final SecretKey key;
  private final long expirationSeconds;
 
  public JwtUtils(@Value("${app.jwt.secret}") String secret,
@@ -36,16 +38,20 @@ public class JwtUtils {
  }
 
  public String getUsernameFromJwt(String token) {
-     return Jwts.parserBuilder().setSigningKey(key).build()
+     return Jwts.parser().verifyWith(key).build()
              .parseClaimsJws(token).getBody().getSubject();
  }
 
  public boolean validateJwtToken(String authToken) {
      try {
-         Jwts.parserBuilder().setSigningKey(key).build().parse(authToken);
+         Jwts.parser().verifyWith(key).build().parse(authToken);
          return true;
      } catch (JwtException e) {
          return false;
      }
+ }
+
+ public long getExpirationSeconds() {
+     return expirationSeconds;
  }
 }

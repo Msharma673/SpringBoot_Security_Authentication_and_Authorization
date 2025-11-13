@@ -4,7 +4,7 @@ package repository;
 
 import java.util.Optional;
 
-import javax.management.relation.Role;
+import model.Role;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 

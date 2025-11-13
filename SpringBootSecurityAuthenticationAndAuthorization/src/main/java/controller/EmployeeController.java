@@ -1,17 +1,16 @@
 package controller;
 
 //Employee REST controller with mixed authorization rules
-package com.example.corporate.controller;
-
-import com.example.corporate.dto.employee.*;
-import com.example.corporate.model.Employee;
-import com.example.corporate.model.Manager;
-import com.example.corporate.repository.EmployeeRepository;
-import com.example.corporate.repository.ManagerRepository;
+import dto.employee.*;
+import model.Employee;
+import model.Manager;
+import repository.EmployeeRepository;
+import repository.ManagerRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -21,6 +20,7 @@ public class EmployeeController {
  private final EmployeeRepository employeeRepository;
  private final ManagerRepository managerRepository;
 
+ @Autowired
  public EmployeeController(EmployeeRepository employeeRepository, ManagerRepository managerRepository) {
      this.employeeRepository = employeeRepository;
      this.managerRepository = managerRepository;

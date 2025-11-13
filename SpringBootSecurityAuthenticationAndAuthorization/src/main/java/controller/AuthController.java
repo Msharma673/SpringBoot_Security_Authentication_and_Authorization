@@ -1,14 +1,15 @@
 package controller;
 
-
 //Authentication controller implementing signup & login endpoints
-
+import dto.auth.*;
+import service.AuthService;
 import jakarta.validation.Valid;
 import org.slf4j.*;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -16,6 +17,7 @@ public class AuthController {
  private final AuthService authService;
  private final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
+ @Autowired
  public AuthController(AuthService authService) { this.authService = authService; }
 
  @PostMapping("/signup")
