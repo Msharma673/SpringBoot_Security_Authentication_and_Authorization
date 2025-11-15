@@ -19,6 +19,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,6 +32,7 @@ import security.JwtUtils;
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
+ private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
  private final JwtUtils jwtUtils;
  private final CustomUserDetailsService userDetailsService;
 
@@ -66,21 +69,37 @@ public class SecurityConfig {
           .logout(AbstractHttpConfigurer::disable)
           .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
           .authorizeHttpRequests(auth -> {
+            // Allow OPTIONS requests for CORS preflight
+            auth.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll();
+            // Public endpoints - no authentication required
             auth.requestMatchers("/api/auth/**").permitAll();
             auth.requestMatchers("/actuator/**").permitAll();
             auth.requestMatchers("/error").permitAll();
+            // All other requests require authentication
             auth.anyRequest().authenticated();
           })
           .exceptionHandling(exceptions -> exceptions
               .authenticationEntryPoint((request, response, authException) -> {
-                  response.setStatus(org.springframework.http.HttpStatus.UNAUTHORIZED.value());
-                  response.setContentType("application/json");
-                  response.getWriter().write("{\"error\":\"Unauthorized: Invalid or missing authentication token\"}");
+                  try {
+                      response.setStatus(org.springframework.http.HttpStatus.UNAUTHORIZED.value());
+                      response.setContentType("application/json");
+                      response.setCharacterEncoding("UTF-8");
+                      response.getWriter().write("{\"error\":\"Unauthorized: Invalid or missing authentication token\"}");
+                      response.getWriter().flush();
+                  } catch (java.io.IOException e) {
+                      logger.error("Error writing authentication entry point response", e);
+                  }
               })
               .accessDeniedHandler((request, response, accessDeniedException) -> {
-                  response.setStatus(org.springframework.http.HttpStatus.FORBIDDEN.value());
-                  response.setContentType("application/json");
-                  response.getWriter().write("{\"error\":\"Forbidden: Insufficient permissions\"}");
+                  try {
+                      response.setStatus(org.springframework.http.HttpStatus.FORBIDDEN.value());
+                      response.setContentType("application/json");
+                      response.setCharacterEncoding("UTF-8");
+                      response.getWriter().write("{\"error\":\"Forbidden: Insufficient permissions\"}");
+                      response.getWriter().flush();
+                  } catch (java.io.IOException e) {
+                      logger.error("Error writing access denied response", e);
+                  }
               })
           )
           .authenticationProvider(authenticationProvider())
@@ -91,8 +110,16 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080")); // Configure allowed origins
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        // Allow common development origins (add more as needed)
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:8080",
+            "http://localhost:8095",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8080",
+            "http://127.0.0.1:8095"
+        ));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization"));
         configuration.setAllowCredentials(true);
