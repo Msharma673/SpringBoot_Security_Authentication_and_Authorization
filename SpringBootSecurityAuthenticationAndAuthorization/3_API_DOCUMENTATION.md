@@ -91,10 +91,12 @@ This guide provides complete API documentation with both cURL commands and Postm
 
 **Purpose**: This endpoint allows new users to:
 - Create an account with username, email, and password
-- Choose their role (USER or ADMIN - though ADMIN requires special permissions)
+- Choose their role (USER or ADMIN - anyone can create any role)
 - Start using the application
 
 **Why Signup is Public**: Signup must be public (no authentication required) because new users don't have accounts yet. If we required authentication for signup, it would be impossible for new users to join - a chicken-and-egg problem.
+
+**Role Selection**: Anyone can create an account with any role (USER or ADMIN) without any restrictions. Simply specify the desired role in the request body.
 
 **What Happens When You Signup**:
 1. System validates the request (checks username/email not already taken, password meets requirements)
@@ -173,6 +175,86 @@ or
   "password": "Password must be at least 8 characters..."
 }
 ```
+
+#### Creating ADMIN User
+
+**Definition**: Creating an ADMIN user means registering a new user account with ADMIN role, which gives full access to all system features.
+
+**Purpose**: ADMIN users have special privileges:
+- Can access all endpoints (including admin-only endpoints)
+- Can delete employees and managers
+- Have full system access
+
+**Important Note**: Anyone can create an ADMIN user account. There are no restrictions - you don't need to be authenticated or have any special permissions. Simply specify `"role": "ADMIN"` in the signup request.
+
+**Simple Process to Create ADMIN User**:
+
+You can create an ADMIN user directly using the signup endpoint without any authentication:
+
+```bash
+curl -X POST http://localhost:8095/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "new_admin",
+    "email": "newadmin@example.com",
+    "password": "AdminPass123!",
+    "role": "ADMIN"
+  }'
+```
+
+**Response:**
+
+**Success (201 Created):**
+- Status: `201 Created`
+- Body: Empty
+
+**Error (400 Bad Request) - If Username/Email Exists:**
+```json
+{
+  "error": "Username already taken"
+}
+```
+
+or
+
+```json
+{
+  "error": "Email already in use"
+}
+```
+
+**Complete Example - Create and Verify ADMIN User:**
+
+```bash
+# Step 1: Create new admin user (no authentication required)
+curl -X POST http://localhost:8095/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "super_admin",
+    "email": "superadmin@example.com",
+    "password": "SuperAdmin123!",
+    "role": "ADMIN"
+  }'
+
+# Step 2: Verify by logging in with new admin
+curl -X POST http://localhost:8095/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usernameOrEmail": "super_admin",
+    "password": "SuperAdmin123!"
+  }'
+```
+
+**What Happens When You Create ADMIN**:
+1. System validates the new user data (username, email, password)
+2. System creates the new admin user with ADMIN role
+3. System returns success response (201 Created)
+
+**Security Notes**:
+- Always use strong passwords for admin accounts
+- Don't share admin credentials
+- Change default admin password in production
+- Note: Since anyone can create admin accounts, ensure proper security measures are in place for production environments
 
 ---
 
@@ -978,8 +1060,11 @@ For testing ADMIN-only endpoints:
 
 | Endpoint | Method | Auth Required | Role Required | Description |
 |----------|--------|---------------|---------------|-------------|
-| `/api/auth/signup` | POST | ❌ No | - | Create user account |
+| `/api/auth/signup` | POST | ❌ No | - | Create user account (anyone can create any role) |
 | `/api/auth/login` | POST | ❌ No | - | Get JWT token |
+| `/api/auth/forgot-password` | POST | ❌ No | - | Request password reset token |
+| `/api/auth/reset-password` | POST | ❌ No | - | Reset password using token |
+| `/api/auth/logout` | POST | ❌ No | - | Logout (client should discard token) |
 | `/api/employees` | GET | ✅ Yes | USER, ADMIN | Get all employees |
 | `/api/employees` | POST | ✅ Yes | USER, ADMIN | Create employee |
 | `/api/employees/{id}` | GET | ✅ Yes | USER, ADMIN | Get employee by ID |
@@ -990,6 +1075,8 @@ For testing ADMIN-only endpoints:
 | `/api/managers/{id}` | GET | ✅ Yes | USER, ADMIN | Get manager by ID |
 | `/api/managers/{id}` | PUT | ✅ Yes | ADMIN | Update manager |
 | `/api/managers/{id}` | DELETE | ✅ Yes | ADMIN | Delete manager |
+
+**Note**: Signup endpoint is public and anyone can create any role (USER or ADMIN) without authentication.
 
 ---
 
@@ -1098,6 +1185,47 @@ curl -X POST http://localhost:8095/api/employees \
     "managerId": null
   }'
 ```
+
+---
+
+## 👑 Quick Reference: Create ADMIN User
+
+**Definition**: This is a quick reference guide for creating a new ADMIN user account.
+
+**Purpose**: ADMIN users have full system access and can perform all operations.
+
+**Why This Section**: Quick reference for creating admin users - no authentication required!
+
+### Complete Admin Creation Workflow
+
+```bash
+# Step 1: Create new admin user (no authentication required)
+curl -X POST http://localhost:8095/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "new_admin",
+    "email": "newadmin@example.com",
+    "password": "AdminPass123!",
+    "role": "ADMIN"
+  }'
+
+# Step 2: Verify by logging in with new admin
+curl -X POST http://localhost:8095/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "usernameOrEmail": "new_admin",
+    "password": "AdminPass123!"
+  }'
+```
+
+### Default Admin Credentials
+
+**Username**: `admin`  
+**Password**: `admin123`  
+**Email**: `admin@example.com`  
+**Role**: `ADMIN`
+
+**Note**: These credentials are automatically created when the application starts (via DataInitializer). Change the default password in production!
 
 ---
 

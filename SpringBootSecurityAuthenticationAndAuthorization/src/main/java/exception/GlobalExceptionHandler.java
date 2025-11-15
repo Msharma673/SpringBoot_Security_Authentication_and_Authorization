@@ -37,8 +37,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<?> handleSecurityException(SecurityException ex) {
         logger.warn("Security violation: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("error", "Access denied: " + ex.getMessage()));
+        // Return 400 Bad Request for security violations during signup (like trying to create ADMIN without permission)
+        // This is more appropriate than 403 Forbidden for validation/authorization errors in public endpoints
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)

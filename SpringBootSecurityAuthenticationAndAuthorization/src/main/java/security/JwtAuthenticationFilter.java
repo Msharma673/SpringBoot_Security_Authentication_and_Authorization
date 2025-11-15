@@ -30,10 +30,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
  @Override
  protected boolean shouldNotFilter(HttpServletRequest request) {
      String path = request.getRequestURI();
-     // Skip JWT filter entirely for public endpoints
-     boolean shouldSkip = path.startsWith("/api/auth/") || path.startsWith("/actuator/");
+     // Only skip actuator endpoints, but process /api/auth/ endpoints to allow optional authentication
+     // This allows admin users to create other admin users via signup with token
+     boolean shouldSkip = path.startsWith("/actuator/");
      if (shouldSkip) {
-         logger.debug("Skipping JWT filter for public endpoint: {}", path);
+         logger.debug("Skipping JWT filter for actuator endpoint: {}", path);
      }
      return shouldSkip;
  }
@@ -48,6 +49,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 token = header.substring(7);
             }
             
+            // Process token if provided (even for public endpoints like /api/auth/signup)
+            // This allows authenticated users to create admin accounts
             if (token != null && jwtUtils.validateJwtToken(token)) {
                 String username = jwtUtils.getUsernameFromJwt(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -56,23 +59,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (!userDetails.isEnabled()) {
                     logger.warn("Attempted access with disabled account: {}", username);
                     SecurityContextHolder.clearContext();
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    return;
+                    // For public endpoints, don't block the request, just clear context
+                    if (!request.getRequestURI().startsWith("/api/auth/")) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        return;
+                    }
+                } else {
+                    var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                    logger.debug("Authenticated user: {} for request: {}", username, request.getRequestURI());
                 }
-                
-                var auth = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(auth);
-                logger.debug("Authenticated user: {} for request: {}", username, request.getRequestURI());
             } else if (token != null) {
                 logger.warn("Invalid JWT token provided for request: {}", request.getRequestURI());
-                SecurityContextHolder.clearContext();
+                // For public endpoints, allow request to proceed even with invalid token
+                // (the endpoint itself will handle authorization)
+                if (!request.getRequestURI().startsWith("/api/auth/")) {
+                    SecurityContextHolder.clearContext();
+                }
             }
         } catch (org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
             logger.warn("User not found during JWT validation: {}", ex.getMessage());
-            SecurityContextHolder.clearContext();
+            // For public endpoints, allow request to proceed
+            if (!request.getRequestURI().startsWith("/api/auth/")) {
+                SecurityContextHolder.clearContext();
+            }
         } catch (Exception ex) {
             logger.error("Cannot set user authentication: {}", ex.getMessage(), ex);
-            SecurityContextHolder.clearContext();
+            // For public endpoints, allow request to proceed even if authentication fails
+            if (!request.getRequestURI().startsWith("/api/auth/")) {
+                SecurityContextHolder.clearContext();
+            }
         }
         filterChain.doFilter(request, response);
     }

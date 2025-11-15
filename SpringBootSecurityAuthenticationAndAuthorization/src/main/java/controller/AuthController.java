@@ -6,8 +6,6 @@ import service.AuthService;
 import jakarta.validation.Valid;
 import org.slf4j.*;
 import org.springframework.http.*;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -22,13 +20,8 @@ public class AuthController {
 
  @PostMapping("/signup")
  public ResponseEntity<?> signup(@Valid @RequestBody SignupRequest request) {
-     String requester = null;
-     var auth = SecurityContextHolder.getContext().getAuthentication();
-     if (auth != null && auth.isAuthenticated()) {
-         requester = auth.getName();
-     }
-     authService.signup(request, requester);
-     logger.info("Signup performed for username={}", request.getUsername());
+     authService.signup(request);
+     logger.info("Signup performed for username={} with role={}", request.getUsername(), request.getRole());
      return ResponseEntity.status(HttpStatus.CREATED).build();
  }
 
@@ -39,5 +32,23 @@ public class AuthController {
      return ResponseEntity.ok(resp);
  }
 
- // TODO: forgot-password/reset-password/logout endpoints can be added similarly
+ @PostMapping("/forgot-password")
+ public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+     ForgotPasswordResponse response = authService.forgotPassword(request);
+     logger.info("Password reset requested for email={}", request.getEmail());
+     return ResponseEntity.ok(response);
+ }
+
+ @PostMapping("/reset-password")
+ public ResponseEntity<MessageResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+     authService.resetPassword(request);
+     logger.info("Password reset completed successfully");
+     return ResponseEntity.ok(new MessageResponse("Password has been reset successfully"));
+ }
+
+ @PostMapping("/logout")
+ public ResponseEntity<MessageResponse> logout(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+     authService.logout(authHeader);
+     return ResponseEntity.ok(new MessageResponse("Logged out successfully"));
+ }
 }
