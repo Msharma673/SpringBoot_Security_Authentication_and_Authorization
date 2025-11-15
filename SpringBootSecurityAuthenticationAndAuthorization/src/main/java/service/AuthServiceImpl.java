@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
+import java.util.List;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -44,24 +45,36 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public JwtResponse authenticate(LoginRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getUsernameOrEmail(),
+                            request.getPassword()
+                    )
+            );
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsernameOrEmail(),
-                        request.getPassword()
-                )
-        );
+            String username = authentication.getName();
+            
+            // Extract roles from authentication
+            List<String> roles = authentication.getAuthorities().stream()
+                    .map(authority -> authority.getAuthority().replace("ROLE_", ""))
+                    .toList();
+            
+            String token = jwtUtils.generateToken(username, roles);
 
-        String username = authentication.getName();
-        String token = jwtUtils.generateToken(username);
+            logger.info("User {} authenticated successfully with roles: {}", username, roles);
 
-        logger.info("User {} authenticated successfully", username);
-
-        return new JwtResponse(token, "Bearer", jwtUtils.getExpirationSeconds());
+            return new JwtResponse(token, "Bearer", jwtUtils.getExpirationSeconds());
+        } catch (org.springframework.security.core.AuthenticationException e) {
+            logger.warn("Authentication failed for user: {}", request.getUsernameOrEmail());
+            throw e;
+        }
     }
 
     @Override
     public void signup(SignupRequest request, String requesterUsername) {
+        // Validate password strength
+        validatePassword(request.getPassword());
 
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username already taken");
@@ -76,6 +89,7 @@ public class AuthServiceImpl implements AuthService {
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setEnabled(true); // New users are enabled by default
 
         // prevent NullPointerException
         user.setRoles(new HashSet<>());
@@ -112,5 +126,24 @@ public class AuthServiceImpl implements AuthService {
         userRepository.save(user);
 
         logger.info("New user created: {} with role {}", user.getUsername(), desiredRole);
+    }
+
+    private void validatePassword(String password) {
+        if (password == null || password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+        if (password.length() > 128) {
+            throw new IllegalArgumentException("Password must be less than 128 characters");
+        }
+        boolean hasUpperCase = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLowerCase = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecial = password.chars().anyMatch(ch -> "!@#$%^&*()_+-=[]{}|;:,.<>?".indexOf(ch) >= 0);
+        
+        if (!hasUpperCase || !hasLowerCase || !hasDigit || !hasSpecial) {
+            throw new IllegalArgumentException(
+                "Password must contain at least one uppercase letter, one lowercase letter, one digit, and one special character"
+            );
+        }
     }
 }

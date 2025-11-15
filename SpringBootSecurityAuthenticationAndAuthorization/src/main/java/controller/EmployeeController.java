@@ -2,6 +2,7 @@ package controller;
 
 //Employee REST controller with mixed authorization rules
 import dto.employee.*;
+import exception.ResourceNotFoundException;
 import model.Employee;
 import model.Manager;
 import repository.EmployeeRepository;
@@ -46,14 +47,16 @@ public class EmployeeController {
  @PreAuthorize("hasAnyRole('ADMIN','USER')")
  @GetMapping("/{id}")
  public ResponseEntity<EmployeeDto> getById(@PathVariable Long id) {
-     Employee e = employeeRepository.findById(id).orElseThrow();
+     Employee e = employeeRepository.findById(id)
+             .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
      return ResponseEntity.ok(toDto(e));
  }
 
  @PreAuthorize("hasAnyRole('ADMIN','USER')")
  @PutMapping("/{id}")
  public ResponseEntity<EmployeeDto> update(@PathVariable Long id, @Valid @RequestBody EmployeeCreateRequest req) {
-     Employee e = employeeRepository.findById(id).orElseThrow();
+     Employee e = employeeRepository.findById(id)
+             .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
      e.setFirstName(req.getFirstName());
      e.setLastName(req.getLastName());
      e.setEmail(req.getEmail());
@@ -70,6 +73,9 @@ public class EmployeeController {
  @PreAuthorize("hasRole('ADMIN')")
  @DeleteMapping("/{id}")
  public ResponseEntity<Void> delete(@PathVariable Long id) {
+     if (!employeeRepository.existsById(id)) {
+         throw new ResourceNotFoundException("Employee not found with id: " + id);
+     }
      employeeRepository.deleteById(id);
      return ResponseEntity.noContent().build();
  }

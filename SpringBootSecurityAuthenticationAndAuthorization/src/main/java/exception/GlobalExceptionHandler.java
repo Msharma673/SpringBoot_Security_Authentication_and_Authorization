@@ -34,10 +34,31 @@ public class GlobalExceptionHandler {
      return ResponseEntity.badRequest().body(Map.of("validationErrors", errors));
  }
 
- @ExceptionHandler(Exception.class)
- public ResponseEntity<?> handleUnexpected(Exception ex) {
-     logger.error("Unexpected error", ex);
-     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-             .body(Map.of("error", "Internal server error"));
- }
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<?> handleSecurityException(SecurityException ex) {
+        logger.warn("Security violation: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Access denied: " + ex.getMessage()));
+    }
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<?> handleAuthenticationException(org.springframework.security.core.AuthenticationException ex) {
+        logger.warn("Authentication failed: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "Invalid credentials"));
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<?> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        logger.warn("Access denied: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "Access denied"));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleUnexpected(Exception ex) {
+        logger.error("Unexpected error", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Internal server error"));
+    }
 }
