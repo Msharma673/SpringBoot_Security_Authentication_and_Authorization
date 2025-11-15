@@ -48,7 +48,7 @@ public class EmployeeController {
  @GetMapping("/{id}")
  public ResponseEntity<EmployeeDto> getById(@PathVariable Long id) {
      Employee e = employeeRepository.findById(id)
-             .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
+             .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", id));
      return ResponseEntity.ok(toDto(e));
  }
 
@@ -56,7 +56,7 @@ public class EmployeeController {
  @PutMapping("/{id}")
  public ResponseEntity<EmployeeDto> update(@PathVariable Long id, @Valid @RequestBody EmployeeCreateRequest req) {
      Employee e = employeeRepository.findById(id)
-             .orElseThrow(() -> new ResourceNotFoundException("Employee not found with id: " + id));
+             .orElseThrow(() -> new ResourceNotFoundException("Employee", "id", id));
      e.setFirstName(req.getFirstName());
      e.setLastName(req.getLastName());
      e.setEmail(req.getEmail());
@@ -74,7 +74,7 @@ public class EmployeeController {
  @DeleteMapping("/{id}")
  public ResponseEntity<Void> delete(@PathVariable Long id) {
      if (!employeeRepository.existsById(id)) {
-         throw new ResourceNotFoundException("Employee not found with id: " + id);
+         throw new ResourceNotFoundException("Employee", "id", id);
      }
      employeeRepository.deleteById(id);
      return ResponseEntity.noContent().build();

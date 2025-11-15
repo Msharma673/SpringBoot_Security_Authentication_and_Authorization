@@ -41,15 +41,15 @@ public class JwtUtils {
         Date now = new Date();
         Date exp = new Date(now.getTime() + expirationSeconds * 1000);
         
-        Claims claims = Jwts.claims().subject(username);
-        claims.put("roles", roles);
-        claims.put("iat", now);
-        claims.put("exp", exp);
+        Claims claims = Jwts.claims()
+                .subject(username)
+                .add("roles", roles)
+                .issuedAt(now)
+                .expiration(exp)
+                .build();
         
         return Jwts.builder()
                 .claims(claims)
-                .issuedAt(now)
-                .expiration(exp)
                 .signWith(key)
                 .compact();
     }
