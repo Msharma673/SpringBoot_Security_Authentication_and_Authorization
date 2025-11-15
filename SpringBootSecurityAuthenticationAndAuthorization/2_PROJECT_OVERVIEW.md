@@ -18,12 +18,14 @@ This document explains what each file does in the project and how to run the app
 - **For Learning**: Explains the "why" behind each component
 - **For Reference**: Quick lookup when you need to find a specific file
 - **For Running**: Clear instructions on how to start the application
+- **For Understanding**: Deep dive into how each component works and why it's structured that way
 
 **What You'll Learn**:
 - The purpose of each Java class
 - Why we organize files in specific folders
 - How different components work together
 - Multiple ways to run and test the application
+- Detailed explanations of each file's role and importance
 
 ---
 
@@ -115,22 +117,39 @@ SpringBootSecurityAuthenticationAndAuthorization/
 - Main entry point of the Spring Boot application (where execution begins)
 - Starts the Spring application context (loads all components and configurations)
 - Configures component scanning for all packages (tells Spring where to find your classes)
+- Initializes all Spring beans (creates instances of components)
+- Starts the embedded Tomcat web server
+- Connects to the database
+- Runs DataInitializer to create default data
 
 **Purpose**: This class:
 - Bootstraps the entire application (starts everything)
 - Initializes Spring Framework (loads all beans and configurations)
 - Starts the embedded web server (Tomcat server on port 8095)
 - Scans for components (finds all your controllers, services, repositories)
+- Sets up the application context (the container that holds all Spring beans)
 
 **Why We Need This**: Without this class, Spring Boot doesn't know where to start. It's like having a car but no ignition key. This class is the key that starts everything.
 
-**How It Works**:
-1. When you run this class, Spring Boot starts
-2. It reads `application.properties` for configuration
-3. It scans all packages for Spring components (classes with `@Component`, `@Service`, `@Controller`, etc.)
-4. It creates instances of these components (called "beans")
-5. It starts the web server
-6. Your application is now running and ready to accept requests
+**How It Works** (Step-by-Step):
+1. **Java Starts**: When you run this class, Java calls the `main()` method
+2. **Spring Boot Initializes**: `SpringApplication.run()` starts Spring Boot framework
+3. **Read Configuration**: Spring Boot reads `application.properties` for all settings
+4. **Scan Components**: Spring scans all packages for classes with Spring annotations (@Component, @Service, @Controller, etc.)
+5. **Create Beans**: Spring creates instances (beans) of all components
+6. **Wire Dependencies**: Spring injects dependencies (constructor injection, field injection)
+7. **Initialize Database**: Hibernate creates/updates database tables based on entities
+8. **Run DataInitializer**: DataInitializer creates default roles and users
+9. **Start Web Server**: Embedded Tomcat server starts on port 8095
+10. **Application Ready**: Application is now running and ready to accept HTTP requests
+
+**What Happens When Application Starts**:
+- All controllers are registered and ready to handle requests
+- Security configuration is loaded and active
+- Database connection is established
+- Default users (admin/admin123, user/user123) are created
+- JWT filter is active and checking tokens
+- All services are initialized and ready
 
 **Location:** `src/main/java/com/SpringBootSecurity/.../`
 

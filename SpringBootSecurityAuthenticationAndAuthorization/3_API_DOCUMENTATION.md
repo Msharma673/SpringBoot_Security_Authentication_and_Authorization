@@ -23,6 +23,17 @@ This guide provides complete API documentation with both cURL commands and Postm
 - **Definition**: API stands for Application Programming Interface. It's a way for different applications to communicate with each other.
 - **Purpose**: APIs allow clients (like web browsers, mobile apps, or other services) to request data or perform actions on the server.
 - **Why We Need APIs**: Without APIs, there's no way for external systems to interact with our application. APIs are like a menu in a restaurant - they show what's available and how to order it.
+- **How APIs Work**:
+  1. Client sends HTTP request (GET, POST, PUT, DELETE) to a URL (endpoint)
+  2. Server receives request and processes it
+  3. Server performs the requested operation (create, read, update, delete)
+  4. Server sends HTTP response back to client (with data or status)
+- **REST API**: Our application uses REST (Representational State Transfer) - a standard way to design APIs
+- **HTTP Methods**:
+  - **GET**: Retrieve data (read)
+  - **POST**: Create new data
+  - **PUT**: Update existing data
+  - **DELETE**: Remove data
 
 **What You'll Learn**:
 - How to authenticate (login and get token)
